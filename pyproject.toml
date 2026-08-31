@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "octave"
+version = "0.1.0"
+description = "A lightweight local Apple Music library and TUI player for Linux"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+dependencies = ["mutagen>=1.47", "platformdirs>=4.2", "textual>=0.70", "textual-image[textual]>=0.10"]
+
+[project.scripts]
+amt = "apple_music_tui.cli:main"
+apple-music-tui = "apple_music_tui.cli:main"
+octave = "apple_music_tui.cli:main"
+
+[tool.hatch.build.targets.wheel]
+# The compatibility package loads these implementation modules from the
+# installed wheel at runtime, so include the flat src/*.py modules too.
+only-include = [
+  "src/apple_music_tui",
+  "src/__init__.py",
+  "src/__main__.py",
+  "src/cli.py",
+  "src/config.py",
+  "src/downloader.py",
+  "src/library.py",
+  "src/playback.py",
+  "src/tui.py",
+]
+sources = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
