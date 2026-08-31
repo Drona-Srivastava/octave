@@ -52,6 +52,7 @@ desktop_file="$applications_dir/octave.desktop"
 mkdir -p "$applications_dir"
 octave_bin="$(command -v octave)"
 icon_name="multimedia-player"
+icon_path=""
 if [ -f "$repo_dir/logos/octave.png" ]; then
   for size in 16 24 32 48 64 128 256 512; do
     icon_source="$repo_dir/logos/octave-${size}.png"
@@ -59,6 +60,9 @@ if [ -f "$repo_dir/logos/octave.png" ]; then
     if [ -f "$icon_source" ]; then
       mkdir -p "$icons_dir"
       install -m 644 "$icon_source" "$icons_dir/octave.png"
+      if [ "$size" = 512 ]; then
+        icon_path="$icons_dir/octave.png"
+      fi
     fi
   done
   icon_name="octave"
@@ -71,7 +75,7 @@ Name=Octave
 Comment=Local Apple Music library and TUI player
 Exec=$octave_bin
 TryExec=$octave_bin
-Icon=$icon_name
+Icon=${icon_path:-$icon_name}
 Terminal=true
 Categories=AudioVideo;Audio;Player;
 StartupNotify=true
@@ -80,6 +84,10 @@ chmod 644 "$desktop_file"
 
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database "$applications_dir" >/dev/null 2>&1 || true
+fi
+icons_root="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor"
+if command -v gtk-update-icon-cache >/dev/null 2>&1 && [ -d "$icons_root" ]; then
+  gtk-update-icon-cache -f -t "$icons_root" >/dev/null 2>&1 || true
 fi
 
 printf 'Octave installed. Run: octave\n'
