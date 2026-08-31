@@ -24,6 +24,11 @@ cd octave
 The installer creates an `octave` command and adds Octave to the Linux
 application menu. It also installs `gamdl` with `uv`.
 
+Octave uses the system Python selected by `python3` (or `python`). Python
+3.11 or newer is supported; the installer does not require exactly Python
+3.11. `uv` is used to create an isolated tool environment and install Python
+dependencies, so project packages do not need to be installed globally.
+
 ## First-time setup
 
 Export your Apple Music browser cookies in Netscape format, then run:
@@ -66,3 +71,63 @@ the TUI. `amt` remains available as a compatibility alias.
 
 Cookies are sensitive Netscape-format browser cookies. They are never logged,
 stored in the library, or included in this repository.
+
+## Useful commands
+
+```bash
+octave status       # Show the number of indexed tracks
+octave update       # Rescan the local music library
+octave playlists    # List imported playlists
+octave songs        # List indexed songs and file paths
+octave config       # Print the active configuration path
+octave              # Launch the TUI
+```
+
+## Configuration and storage
+
+The default configuration is stored at `~/.config/octave/config.toml`. Media
+is stored under `~/Music/Octave` by default, with the SQLite index in the same
+library directory. The theme selected with `Ctrl+T` is saved in the `[ui]`
+section and restored on the next launch.
+
+To use another library or player, edit the configuration file, for example:
+
+```toml
+[library]
+path = "~/Music/Octave"
+
+[playback]
+player = "mpv"
+
+[ui]
+theme = "textual-dark"
+```
+
+Logs are stored under the platform's user state directory. On most Linux
+systems this is `~/.local/state/octave/log/amt.log`.
+
+## Troubleshooting
+
+- Check `python3 --version`; it must be 3.11 or newer.
+- Check `command -v octave`, `command -v gamdl`, `command -v mpv`, and
+  `command -v ffmpeg` if installation or playback fails.
+- Run `octave status` before launching the TUI to confirm that the library is
+  configured and readable.
+- Imports require a valid Netscape-format Apple Music cookie export. Cookies
+  may expire and need to be exported again.
+- If the application menu does not refresh immediately, run:
+
+  ```bash
+  update-desktop-database ~/.local/share/applications
+  ```
+
+## Uninstall
+
+Remove the Octave command and application-menu entry with:
+
+```bash
+./uninstall.sh
+```
+
+This keeps your music library and configuration. Remove `~/.config/octave`
+manually only if you also want to delete your settings and cookies.

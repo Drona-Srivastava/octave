@@ -29,8 +29,18 @@ if [ -n "$uv_tool_bin" ]; then
   export PATH="$uv_tool_bin:$PATH"
 fi
 
-uv tool install --force "$repo_dir"
-uv tool install --force gamdl
+system_python="$(command -v python3 || command -v python || true)"
+if [ -z "$system_python" ]; then
+  printf '%s\n' 'Python 3.11+ is required but was not found.' >&2
+  exit 1
+fi
+if ! "$system_python" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)'; then
+  printf '%s\n' "Python 3.11+ is required. Found: $($system_python --version 2>&1)" >&2
+  exit 1
+fi
+
+uv tool install --force --python "$system_python" "$repo_dir"
+uv tool install --force --python "$system_python" gamdl
 
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/octave"
 mkdir -p "$config_dir"
