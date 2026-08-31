@@ -53,7 +53,7 @@ mkdir -p "$applications_dir"
 octave_bin="$(command -v octave)"
 icon_name="multimedia-player"
 icon_path=""
-if [ -f "$repo_dir/logos/octave.png" ]; then
+if [ -f "$repo_dir/logos/octave-512.png" ]; then
   for size in 16 24 32 48 64 128 256 512; do
     icon_source="$repo_dir/logos/octave-${size}.png"
     icons_dir="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/${size}x${size}/apps"
