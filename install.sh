@@ -51,6 +51,13 @@ applications_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 desktop_file="$applications_dir/octave.desktop"
 mkdir -p "$applications_dir"
 octave_bin="$(command -v octave)"
+icons_dir="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/512x512/apps"
+icon_name="multimedia-player"
+if [ -f "$repo_dir/octavelogo.png" ]; then
+  mkdir -p "$icons_dir"
+  install -m 644 "$repo_dir/octavelogo.png" "$icons_dir/octave.png"
+  icon_name="octave"
+fi
 cat > "$desktop_file" <<EOF
 [Desktop Entry]
 Version=1.0
@@ -59,7 +66,7 @@ Name=Octave
 Comment=Local Apple Music library and TUI player
 Exec=$octave_bin
 TryExec=$octave_bin
-Icon=multimedia-player
+Icon=$icon_name
 Terminal=true
 Categories=AudioVideo;Audio;Player;
 StartupNotify=true
