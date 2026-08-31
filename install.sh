@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+install_system_packages() {
+  if command -v pacman >/dev/null 2>&1; then
+    sudo pacman -S --needed python uv mpv ffmpeg chafa
+  elif command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get update
+    sudo apt-get install -y python3 python3-venv ffmpeg mpv chafa curl
+  elif command -v dnf >/dev/null 2>&1; then
+    sudo dnf install -y python3 ffmpeg mpv chafa curl
+  else
+    printf '%s\n' 'Unsupported package manager. Install Python 3.11+, uv, mpv, ffmpeg, and chafa manually.' >&2
+  fi
+}
+
+install_system_packages
+
+if ! command -v uv >/dev/null 2>&1; then
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  export PATH="$HOME/.local/bin:$PATH"
+fi
+
+# uv may already be installed while its tool bin directory is not in PATH.
+uv_tool_bin="$(uv tool dir --bin 2>/dev/null || true)"
+if [ -n "$uv_tool_bin" ]; then
+  export PATH="$uv_tool_bin:$PATH"
+fi
+
+uv tool install --force "$repo_dir"
+uv tool install --force gamdl
+
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/octave"
+mkdir -p "$config_dir"
+
+# Register Octave in graphical Linux application menus. The TUI needs a
+# terminal, so desktop environments should launch it in one.
+applications_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+desktop_file="$applications_dir/octave.desktop"
+mkdir -p "$applications_dir"
+octave_bin="$(command -v octave)"
+cat > "$desktop_file" <<EOF
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Octave
+Comment=Local Apple Music library and TUI player
+Exec=$octave_bin
+TryExec=$octave_bin
+Icon=multimedia-player
+Terminal=true
+Categories=AudioVideo;Audio;Player;
+StartupNotify=true
+EOF
+chmod 644 "$desktop_file"
+
+if command -v update-desktop-database >/dev/null 2>&1; then
+  update-desktop-database "$applications_dir" >/dev/null 2>&1 || true
+fi
+
+printf 'Octave installed. Run: octave\n'
+printf 'Application menu entry: %s\n' "$desktop_file"
