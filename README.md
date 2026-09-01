@@ -26,8 +26,9 @@ application menu. It also installs `gamdl` with `uv`.
 
 Octave configures Gamdl for the reliable `aac-web` codec, FFmpeg-backed
 downloads, saved playlist manifests, and a private temporary directory under
-`~/.config/octave/.gamdl-temp`. Synced lyrics are optional and disabled during
-downloads, so a song remains fully playable when Apple Music has no lyrics.
+`~/.config/octave/.gamdl-temp`. Synced LRC lyrics are requested when Apple
+Music provides them, but they are optional; a song remains fully playable when
+no lyrics are available.
 
 Octave uses the system Python selected by `python3` (or `python`). Python
 3.11 or newer is supported; the installer does not require exactly Python

@@ -25,15 +25,15 @@ class Gamdl:
 
     def command(self, url: str) -> list[str]:
         # Keep Gamdl fully controlled by Octave instead of inheriting a user's
-        # unrelated ~/.gamdl/config.ini settings. Missing lyrics must never
-        # prevent a playable audio file from being downloaded.
+        # unrelated ~/.gamdl/config.ini settings. Lyrics are requested when
+        # available, but Gamdl remains free to continue when none exist.
         temp_path = self.config.library_path / ".gamdl-temp"
         cmd = [self.config.gamdl_binary, "--no-config-file",
                "--output-path", str(self.config.library_path),
                "--temp-path", str(temp_path),
                "--download-mode", "ytdlp", "--ffmpeg-path", "ffmpeg",
                "--song-codec-priority", self.config.codec,
-               "--no-synced-lyrics"]
+               "--synced-lyrics-format", "lrc"]
         if self.config.cookies_path:
             cmd += ["--cookies-path", str(self.config.cookies_path)]
         if self.config.cover_art:
