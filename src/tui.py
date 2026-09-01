@@ -40,7 +40,7 @@ class TextPrompt(ModalScreen[str | None]):
         self.dismiss(self.query_one("#value", Input).value.strip())
 
 
-class AddPlaylistPrompt(ModalScreen[tuple[str, str] | None]):
+class AddPlaylistPrompt(ModalScreen[tuple[str, str, str] | None]):
     def __init__(self, cookies: str):
         super().__init__()
         self.cookies = cookies
@@ -50,6 +50,8 @@ class AddPlaylistPrompt(ModalScreen[tuple[str, str] | None]):
             yield Label("Add Apple Music playlist")
             yield Label("cookies.txt path")
             yield Input(value=self.cookies, placeholder="/path/to/cookies.txt", id="cookies")
+            yield Label("Playlist name")
+            yield Input(placeholder="My playlist", id="name")
             yield Label("Playlist URL")
             yield Input(placeholder="https://music.apple.com/...", id="url")
             with Horizontal(id="dialog-buttons"):
@@ -63,8 +65,9 @@ class AddPlaylistPrompt(ModalScreen[tuple[str, str] | None]):
     @on(Button.Pressed, "#ok")
     def submit(self) -> None:
         cookies = self.query_one("#cookies", Input).value.strip()
+        name = self.query_one("#name", Input).value.strip()
         url = self.query_one("#url", Input).value.strip()
-        self.dismiss((cookies, url) if url else None)
+        self.dismiss((cookies, url, name) if url else None)
 
 
 class MusicApp(App):
@@ -106,6 +109,7 @@ class MusicApp(App):
         self.tracks, self.playlist_names = self.all_tracks, ["All Songs", *library.playlists()]
         self.active_playlist = "All Songs"
         self.current_index: int | None = None
+        self.current_path: str | None = None
         self.lyrics: list[tuple[float, str]] = []
         self.import_worker: Worker[None] | None = None
         self.shuffle_enabled = False
@@ -167,6 +171,8 @@ class MusicApp(App):
 
     def _load_playlist(self, name: str) -> None:
         self.tracks = self.all_tracks if name == "All Songs" else self.library.tracks_for_playlist(name)
+        if self.current_path is not None:
+            self.current_index = next((i for i, track in enumerate(self.tracks) if track.path == self.current_path), None)
         self._apply_filters()
 
     def _apply_filters(self) -> None:
@@ -174,12 +180,12 @@ class MusicApp(App):
             term = self.search_term.casefold()
             self.tracks = [track for track in self.tracks if term in f"{track.title} {track.artist} {track.album}".casefold()]
         self._render_tracks()
-        self._render_tracks()
 
     def play_index(self, index: int) -> None:
         track = self.tracks[index]
         self.player.play(self.library.root / track.path)
         self.current_index = index
+        self.current_path = track.path
         self.queue = list(range(len(self.tracks)))
         if self.shuffle_enabled:
             random.shuffle(self.queue)
@@ -188,6 +194,7 @@ class MusicApp(App):
         self.queue.insert(0, index)
         self.query_one("#track-title", Label).update(track.title)
         self.query_one("#track-meta", Label).update(f"{track.artist}  •  {track.album}")
+        self._highlight_current_track()
         self.show_media_details(track.path)
         self.query_one("#status", Label).update(f"Playing: {track.artist} — {track.title}")
 
@@ -248,6 +255,10 @@ class MusicApp(App):
             if self.repeat_enabled and self.current_index is not None:
                 self.play_index(self.current_index)
                 return
+            if not self.shuffle_enabled:
+                next_index = 0 if self.current_index is None else (self.current_index + 1) % len(self.tracks)
+                self.play_index(next_index)
+                return
             if not self.queue:
                 self.queue = list(range(len(self.tracks)))
                 if self.shuffle_enabled:
@@ -262,6 +273,9 @@ class MusicApp(App):
         if self.tracks:
             if self.current_index is None:
                 self.play_index(0)
+                return
+            if not self.shuffle_enabled:
+                self.play_index((self.current_index - 1) % len(self.tracks))
                 return
             if self.queue and self.current_index in self.queue:
                 position = (self.queue.index(self.current_index) - 1) % len(self.queue)
@@ -296,6 +310,8 @@ class MusicApp(App):
         labels = ["artist", "title", "album"]
         key = labels[self.sort_mode]
         self.tracks.sort(key=lambda track: (getattr(track, key).casefold(), track.title.casefold()))
+        self.current_index = next((i for i, track in enumerate(self.tracks) if track.path == self.current_path), None)
+        self.queue = []
         self._render_tracks()
         self._set_status(f"Sorted by {key}")
 
@@ -334,7 +350,15 @@ class MusicApp(App):
             return
         url = self.library.playlist_url(self.active_playlist)
         if url:
-            self.import_playlist((str(self.config.cookies_path or ""), url))
+            self.push_screen(
+                TextPrompt("Latest cookies.txt path", "Refresh", str(self.config.cookies_path or "")),
+                lambda cookies: self._refresh_playlist(cookies, url),
+            )
+
+    def _refresh_playlist(self, cookies: str | None, url: str) -> None:
+        if cookies:
+            self.config.cookies_path = Path(cookies).expanduser()
+        self.import_playlist((str(self.config.cookies_path or ""), url, self.active_playlist))
 
     def action_add_playlist(self) -> None:
         if self.import_worker and not self.import_worker.is_finished:
@@ -354,29 +378,27 @@ class MusicApp(App):
             self.playlist_names = self.library.playlists()
             view.clear(); view.extend(ListItem(Label(item)) for item in self.playlist_names)
 
-    def import_playlist(self, values: tuple[str, str] | None) -> None:
+    def import_playlist(self, values: tuple[str, str, str] | None) -> None:
         if not values:
             return
-        cookies, url = values
+        cookies, url, name = values
         if cookies:
             self.config.cookies_path = Path(cookies).expanduser()
         self.query_one("#status", Label).update("Preparing playlist import…")
         self.query_one("#import-progress", ProgressBar).styles.display = "block"
         self.query_one("#import-progress", ProgressBar).update(progress=0)
         self.import_worker = self.run_worker(
-            lambda: self._import_playlist_worker(url),
+            lambda: self._import_playlist_worker(url, name),
             name="playlist-import",
             thread=True,
             exclusive=True,
         )
 
-    def _import_playlist_worker(self, url: str) -> None:
+    def _import_playlist_worker(self, url: str, name: str) -> None:
         try:
             Gamdl(self.config).run(url, on_output=self._import_progress)
             self.library.scan()
             self.all_tracks = self.library.tracks()
-            parts = [unquote(part) for part in urlparse(url).path.split("/") if part]
-            name = next((part for part in reversed(parts) if not part.startswith("p.")), "Imported playlist").replace("-", " ")
             self.library.register_playlist(name, url)
             self.call_from_thread(self._refresh_library, f"Playlist imported: {len(self.all_tracks)} songs indexed")
         except DownloadError as exc:
@@ -419,6 +441,17 @@ class MusicApp(App):
         tracks = self.query_one("#tracks", ListView)
         tracks.clear()
         tracks.extend(ListItem(Label(self._track_label(t))) for t in self.tracks)
+        self._highlight_current_track()
+
+    def _highlight_current_track(self) -> None:
+        if not self.is_mounted:
+            return
+        tracks = self.query_one("#tracks", ListView)
+        if self.current_path is None:
+            tracks.index = None
+            return
+        index = next((i for i, track in enumerate(self.tracks) if track.path == self.current_path), None)
+        tracks.index = index
 
     def _track_label(self, track) -> str:
         return f"{track.title}  —  {track.album}" if self.show_album else track.title

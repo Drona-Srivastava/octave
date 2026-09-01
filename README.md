@@ -24,6 +24,11 @@ cd octave
 The installer creates an `octave` command and adds Octave to the Linux
 application menu. It also installs `gamdl` with `uv`.
 
+Octave configures Gamdl for the reliable `aac-web` codec, FFmpeg-backed
+downloads, saved playlist manifests, and a private temporary directory under
+`~/.config/octave/.gamdl-temp`. Synced lyrics are optional and disabled during
+downloads, so a song remains fully playable when Apple Music has no lyrics.
+
 Octave uses the system Python selected by `python3` (or `python`). Python
 3.11 or newer is supported; the installer does not require exactly Python
 3.11. `uv` is used to create an isolated tool environment and install Python
@@ -61,8 +66,9 @@ Press `a` to add another playlist. Press Enter to play, `n`
 for next, `b` for previous, `s` for shuffle, `t` for repeat, `l` to toggle
 album names, `/` to search, `o` to sort, `u` to rescan, and `q` to quit.
 
-The application creates `~/.config/octave/config.toml` on first run. Media and
-the SQLite index live below the configured library path. Uninstalling Octave
+The application creates `~/.config/octave/config.toml` on first run. Media,
+playlists, cookies, and the SQLite index live below the configured library path.
+Uninstalling Octave
 does not remove your music library.
 
 Commands: `octave import URL`, `octave playlists`, `octave songs`,
@@ -86,15 +92,36 @@ octave              # Launch the TUI
 ## Configuration and storage
 
 The default configuration is stored at `~/.config/octave/config.toml`. Media
-is stored under `~/Music/Octave` by default, with the SQLite index in the same
-library directory. The theme selected with `Ctrl+T` is saved in the `[ui]`
+is stored under `~/.config/octave` by default, with the SQLite index in the same
+directory. The theme selected with `Ctrl+T` is saved in the `[ui]`
 section and restored on the next launch.
+
+### Editable playlists
+
+Playlist membership is stored in editable TOML files under
+`~/.config/octave/Playlists/<playlist-name>/playlist.toml`. SQLite remains the
+fast local index for song metadata; it is not the file users need to edit.
+Each playlist file contains a `tracks` list with paths relative to the library:
+
+```toml
+name = "Road Trip"
+source_url = ""
+updated_at = ""
+tracks = [
+  "Artist/Album/song-one.m4a",
+  "song-two.mp3",
+]
+```
+
+Add or remove paths in `tracks`, run `octave update` to index new audio files,
+then reopen or rescan the playlist in the TUI. Apple Music imports create the
+initial `tracks` list from the downloaded playlist; later TOML edits are kept.
 
 To use another library or player, edit the configuration file, for example:
 
 ```toml
 [library]
-path = "~/Music/Octave"
+path = "~/.config/octave"
 
 [playback]
 player = "mpv"

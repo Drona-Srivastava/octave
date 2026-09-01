@@ -3,6 +3,7 @@ from __future__ import annotations
 import sqlite3
 import re
 import json
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -71,30 +72,49 @@ class Library:
         playlist_dir = self.root / "Playlists" / safe
         playlist_dir.mkdir(parents=True, exist_ok=True)
         updated = datetime.now(timezone.utc).isoformat()
+        # Leave tracks absent on first creation so an imported m3u can seed it.
+        # Once written, the TOML tracks list becomes the editable source of truth.
         (playlist_dir / "playlist.toml").write_text(f'name = {json.dumps(name)}\nsource_url = {json.dumps(url)}\nupdated_at = {json.dumps(updated)}\n')
         with self.connect() as db:
             db.execute("INSERT OR REPLACE INTO playlists VALUES (?,?,?)", (name, url, updated))
         self.sync_playlist(name)
 
     def sync_playlist(self, name: str) -> int:
-        """Import the most relevant Gamdl m3u file into playlist_tracks."""
+        """Sync editable TOML playlist membership into the SQLite index."""
         playlist_root = self.root / "Playlists"
-        candidates = list(playlist_root.rglob("*.m3u")) if playlist_root.exists() else []
         safe = re.sub(r"[^A-Za-z0-9._ -]+", "", name).strip()
-        matching = [path for path in candidates if path.stem == name or path.stem == safe]
-        source = max(matching or candidates, key=lambda path: path.stat().st_mtime, default=None)
-        if source is None:
-            return 0
-        paths: list[str] = []
-        for line in source.read_text(errors="replace").splitlines():
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            try:
-                relative = (source.parent / line).resolve().relative_to(self.root.resolve())
-            except ValueError:
-                continue
-            paths.append(str(relative))
+        playlist_file = playlist_root / safe / "playlist.toml"
+        paths: list[str] | None = None
+        raw: dict = {}
+        if playlist_file.exists():
+            with playlist_file.open("rb") as stream:
+                raw = tomllib.load(stream)
+            tracks = raw.get("tracks")
+            if isinstance(tracks, list):
+                paths = [path for path in tracks if isinstance(path, str)]
+
+        if paths is None:
+            candidates = list(playlist_root.rglob("*.m3u")) if playlist_root.exists() else []
+            matching = [path for path in candidates if path.stem == name or path.stem == safe]
+            source = max(matching or candidates, key=lambda path: path.stat().st_mtime, default=None)
+            paths = []
+            if source is not None:
+                for line in source.read_text(errors="replace").splitlines():
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    try:
+                        relative = (source.parent / line).resolve().relative_to(self.root.resolve())
+                    except ValueError:
+                        continue
+                    paths.append(str(relative))
+                if playlist_file.exists():
+                    playlist_file.write_text(
+                        f'name = {json.dumps(raw.get("name", name))}\n'
+                        f'source_url = {json.dumps(raw.get("source_url", ""))}\n'
+                        f'updated_at = {json.dumps(raw.get("updated_at", ""))}\n'
+                        f'tracks = {json.dumps(paths, ensure_ascii=False, indent=2)}\n'
+                    )
         with self.connect() as db:
             db.execute("DELETE FROM playlist_tracks WHERE playlist = ?", (name,))
             for position, path in enumerate(paths):
