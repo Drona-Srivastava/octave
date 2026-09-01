@@ -4,6 +4,15 @@ A lightweight Linux music client that imports Apple Music playlists through
 [gamdl](https://github.com/glomatico/gamdl), indexes local files, and plays them
 with mpv. Apple Music is only needed during import/update.
 
+## Demos
+
+See Octave in action before installing:
+
+1. [Installation and playlist setup](demo/octave_demo.mp4) — installs Octave
+   and adds an Apple Music playlist.
+2. [Playlist refresh](demo/refresh.mp4) — refreshes an existing playlist using
+   its saved Apple Music URL and updated cookies.
+
 ## Arch Linux installation
 
 Octave requires Python 3.11+, `uv`, `gamdl`, `mpv`, `ffmpeg`, and `chafa`.
