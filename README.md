@@ -8,10 +8,23 @@ with mpv. Apple Music is only needed during import/update.
 
 See Octave in action before installing:
 
-1. [Installation and playlist setup](demo/octave_demo.mp4) — installs Octave
-   and adds an Apple Music playlist.
-2. [Playlist refresh](demo/refresh.mp4) — refreshes an existing playlist using
-   its saved Apple Music URL and updated cookies.
+### Installation and playlist setup
+
+<video controls width="800" preload="metadata">
+  <source src="https://raw.githubusercontent.com/Drona-Srivastava/octave/main/demo/octave_demo.mp4" type="video/mp4">
+  Your browser cannot play this video. [Download the installation demo](demo/octave_demo.mp4).
+</video>
+
+[Download the installation and playlist setup demo](demo/octave_demo.mp4)
+
+### Playlist refresh
+
+<video controls width="800" preload="metadata">
+  <source src="https://raw.githubusercontent.com/Drona-Srivastava/octave/main/demo/refresh.mp4" type="video/mp4">
+  Your browser cannot play this video. [Download the refresh demo](demo/refresh.mp4).
+</video>
+
+[Download the playlist refresh demo](demo/refresh.mp4)
 
 ## Arch Linux installation
 
