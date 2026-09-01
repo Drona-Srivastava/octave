@@ -31,7 +31,7 @@ def config_path() -> Path:
 
 def default_config() -> Config:
     base = Path(user_config_dir("octave"))
-    return Config(Path.home() / "Music" / "Octave", cookies_path=base / "cookies.txt")
+    return Config(base, cookies_path=base / "cookies.txt")
 
 
 def load_config(path: Path | None = None) -> Config:
@@ -71,7 +71,7 @@ def ensure_config(path: Path | None = None) -> Path:
     path = path or config_path()
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text('''[library]\npath = "~/Music/Octave"\n\n[gamdl]\nbinary = "gamdl"\ncookies = "~/.config/octave/cookies.txt"\n\n[playback]\nplayer = "mpv"\n\n[ui]\ntheme = "textual-dark"\n\n[downloads]\ncodec = "aac-web"\ncover_art = true\nsave_playlist = true\n''')
+        path.write_text('''[library]\npath = "~/.config/octave"\n\n[gamdl]\nbinary = "gamdl"\ncookies = "~/.config/octave/cookies.txt"\n\n[playback]\nplayer = "mpv"\n\n[ui]\ntheme = "textual-dark"\n\n[downloads]\ncodec = "aac-web"\ncover_art = true\nsave_playlist = true\n''')
         path.chmod(stat.S_IRUSR | stat.S_IWUSR)
     return path
 

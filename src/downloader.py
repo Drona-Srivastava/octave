@@ -24,10 +24,16 @@ class Gamdl:
         self.config = config
 
     def command(self, url: str) -> list[str]:
-        # Do not inherit ~/.gamdl/config.ini: it may enable wrapper mode or
-        # other settings that conflict with this application's configuration.
-        cmd = [self.config.gamdl_binary, "--no-config-file", "--output-path", str(self.config.library_path),
-               "--song-codec-priority", self.config.codec]
+        # Keep Gamdl fully controlled by Octave instead of inheriting a user's
+        # unrelated ~/.gamdl/config.ini settings. Missing lyrics must never
+        # prevent a playable audio file from being downloaded.
+        temp_path = self.config.library_path / ".gamdl-temp"
+        cmd = [self.config.gamdl_binary, "--no-config-file",
+               "--output-path", str(self.config.library_path),
+               "--temp-path", str(temp_path),
+               "--download-mode", "ytdlp", "--ffmpeg-path", "ffmpeg",
+               "--song-codec-priority", self.config.codec,
+               "--no-synced-lyrics"]
         if self.config.cookies_path:
             cmd += ["--cookies-path", str(self.config.cookies_path)]
         if self.config.cover_art:
@@ -43,6 +49,7 @@ class Gamdl:
         if not self.config.cookies_path or not self.config.cookies_path.is_file():
             raise DownloadError(f"cookies.txt not found: {self.config.cookies_path or '(not configured)'}")
         self.config.library_path.mkdir(parents=True, exist_ok=True)
+        (self.config.library_path / ".gamdl-temp").mkdir(parents=True, exist_ok=True)
         try:
             proc = subprocess.Popen(self.command(url), text=True, stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT, bufsize=1)

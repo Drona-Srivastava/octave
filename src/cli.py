@@ -31,12 +31,21 @@ def playlist_name(url: str) -> str:
     return candidate.replace("-", " ").strip() or "Imported playlist"
 
 
-def import_playlist(config, library: Library, url: str) -> int:
+def requested_playlist_name(default: str, supplied: str | None = None) -> str:
+    if supplied:
+        return supplied.strip() or default
+    if not sys.stdin.isatty():
+        return default
+    return input(f"Playlist name [{default}]: ").strip() or default
+
+
+def import_playlist(config, library: Library, url: str, name: str | None = None) -> int:
     if not valid_playlist_url(url):
         print("[ERROR] Invalid Apple Music playlist URL", file=sys.stderr)
         return 2
     try:
-        print(f"Downloading {playlist_name(url)} with gamdl...")
+        name = (name or playlist_name(url)).strip() or playlist_name(url)
+        print(f"Downloading {name} with gamdl...")
         result = Gamdl(config).run(url)
         if result.output.strip():
             print(result.output.rstrip())
@@ -46,7 +55,7 @@ def import_playlist(config, library: Library, url: str) -> int:
     if count == 0:
         print("[ERROR] gamdl produced no audio files. Check its output, cookies, and dependencies.", file=sys.stderr)
         return 1
-    library.register_playlist(playlist_name(url), url)
+    library.register_playlist(name, url)
     print(f"Imported successfully ({count} tracks indexed) into {config.library_path}")
     return 0
 
@@ -57,9 +66,11 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command")
     imp = sub.add_parser("import", help="download and index an Apple Music playlist")
     imp.add_argument("url")
+    imp.add_argument("--name", help="name to use for the local playlist (prompted if omitted)")
     setup = sub.add_parser("setup", help="configure cookies and import playlists")
     setup.add_argument("--cookies", required=True, type=Path)
     setup.add_argument("--playlist", action="append", required=True, help="playlist URL; repeat for multiple playlists")
+    setup.add_argument("--name", action="append", dest="names", help="local playlist name; repeat in playlist order")
     for name in ("playlists", "songs", "update", "status", "config"):
         sub.add_parser(name)
     args = parser.parse_args(argv)
@@ -70,7 +81,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "config":
         print(path); return 0
     if args.command == "import":
-        return import_playlist(config, library, args.url)
+        default_name = playlist_name(args.url)
+        name = requested_playlist_name(default_name, args.name)
+        return import_playlist(config, library, args.url, name)
     if args.command == "setup":
         if not args.cookies.is_file():
             print(f"[ERROR] Cookies file not found: {args.cookies}", file=sys.stderr); return 1
@@ -80,8 +93,12 @@ def main(argv: list[str] | None = None) -> int:
         shutil.copyfile(args.cookies, config.cookies_path)
         config.cookies_path.chmod(stat.S_IRUSR | stat.S_IWUSR)
         print(f"Installed cookies at {config.cookies_path}")
-        for url in args.playlist:
-            result = import_playlist(config, library, url)
+        names = args.names or []
+        for index, url in enumerate(args.playlist):
+            default_name = playlist_name(url)
+            supplied_name = names[index] if index < len(names) else None
+            name = requested_playlist_name(default_name, supplied_name)
+            result = import_playlist(config, library, url, name)
             if result:
                 return result
         return 0

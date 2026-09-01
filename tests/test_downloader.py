@@ -11,6 +11,9 @@ def test_command_contains_safe_options(tmp_path):
     command = Gamdl(cfg).command("https://music.apple.com/us/playlist/example/pl.1")
     assert command[-1].startswith("https://music.apple.com/")
     assert "--no-config-file" in command
+    assert "--no-synced-lyrics" in command
+    assert command[command.index("--download-mode") + 1] == "ytdlp"
+    assert str(tmp_path / ".gamdl-temp") in command
     assert "--cookies-path" in command
     assert "--save-playlist" in command
 
