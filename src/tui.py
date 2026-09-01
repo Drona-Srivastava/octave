@@ -73,7 +73,8 @@ class AddPlaylistPrompt(ModalScreen[tuple[str, str, str] | None]):
 class MusicApp(App):
     TITLE = "Octave — Apple Music TUI"
     BINDINGS = [("q", "quit", "Quit"), ("a", "add_playlist", "Add"), ("r", "rename_playlist", "Rename"),
-                ("p", "pause", "Pause/play"), ("n", "next", "Next"), ("b", "previous", "Previous"),
+                ("p", "pause", "Pause/play"), ("left", "seek_backward", "-5s"), ("right", "seek_forward", "+5s"),
+                ("n", "next", "Next"), ("b", "previous", "Previous"),
                 ("s", "shuffle", "Shuffle"), ("t", "repeat", "Repeat"), ("l", "toggle_album", "Album"), ("/", "search", "Search"),
                 ("o", "sort", "Sort"), ("u", "rescan", "Rescan"), ("f", "refresh_playlist", "Refresh"),
                 ("ctrl+t", "change_theme", "Theme"),
@@ -148,7 +149,7 @@ class MusicApp(App):
                 yield ListView(*(ListItem(Label(name)) for name in self.playlist_names), id="playlists")
                 yield ListView(*(ListItem(Label(self._track_label(t))) for t in self.tracks), id="tracks")
             yield ProgressBar(total=100, show_eta=False, id="import-progress")
-            yield Label("Enter play   P pause   N/B next/prev   S shuffle   T repeat   / search   O sort   U rescan", id="status")
+            yield Label("Enter play   ←/→ seek 5s   P pause   N/B next/prev   S shuffle   T repeat   / search   O sort   U rescan", id="status")
         yield Footer()
 
     @on(ListView.Selected, "#tracks")
@@ -249,6 +250,14 @@ class MusicApp(App):
     def action_pause(self) -> None:
         self.player.pause_toggle()
         self.query_one("#status", Label).update("Playback toggled")
+
+    def action_seek_forward(self) -> None:
+        self.player.seek(5)
+        self._set_status("Skipped forward 5 seconds")
+
+    def action_seek_backward(self) -> None:
+        self.player.seek(-5)
+        self._set_status("Skipped back 5 seconds")
 
     def action_next(self) -> None:
         if self.tracks:

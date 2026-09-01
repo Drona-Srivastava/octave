@@ -63,8 +63,8 @@ curl -fsSL https://github.com/Drona-Srivastava/octave/archive/refs/heads/main.ta
 
 ## TUI controls
 
-Press `a` to add another playlist. Press Enter to play, `n`
-for next, `b` for previous, `s` for shuffle, `t` for repeat, `l` to toggle
+Press `a` to add another playlist. Press Enter to play, Left/Right to seek 5
+seconds, `n` for next, `b` for previous, `s` for shuffle, `t` for repeat, `l` to toggle
 album names, `/` to search, `o` to sort, `u` to rescan, and `q` to quit.
 
 The application creates `~/.config/octave/config.toml` on first run. Media,

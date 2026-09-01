@@ -49,6 +49,12 @@ class MpvPlayer:
             return
         self._command(["cycle", "pause"])
 
+    def seek(self, seconds: int) -> None:
+        """Move playback relative to the current position."""
+        if not self.process or self.process.poll() is not None or not self.socket_path:
+            return
+        self._command(["seek", seconds, "relative"])
+
     def time_position(self) -> float:
         response = self._command(["get_property", "time-pos"])
         try:
