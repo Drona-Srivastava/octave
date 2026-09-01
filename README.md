@@ -1,8 +1,16 @@
 # Octave
 
 A lightweight Linux music client that imports Apple Music playlists through
-[gamdl](https://github.com/glomatico/gamdl), indexes local files, and plays them
-with mpv. Apple Music is only needed during import/update.
+[Gamdl](https://github.com/glomatico/gamdl), indexes local audio files, and
+plays them with `mpv`. Apple Music is only needed during import or refresh.
+
+## Features
+
+- Import Apple Music playlists and give them local names.
+- Play local `m4a`, `mp3`, `flac`, `ogg`, `opus`, and `wav` files.
+- Search, sort, shuffle, repeat, seek, and rescan your library.
+- Request synced LRC lyrics when available without requiring them for playback.
+- Edit playlist membership in TOML and refresh playlists from saved URLs.
 
 ## Demos
 
@@ -40,6 +48,13 @@ cd octave
 The installer creates an `octave` command and adds Octave to the Linux
 application menu. It also installs `gamdl` with `uv`.
 
+Alternatively, install directly from the GitHub source archive:
+
+```bash
+curl -fsSL https://github.com/Drona-Srivastava/octave/archive/refs/heads/main.tar.gz \
+  | tar -xz && cd octave-main && ./install.sh
+```
+
 Octave configures Gamdl for the reliable `aac-web` codec, FFmpeg-backed
 downloads, saved playlist manifests, and a private temporary directory under
 `~/.config/octave/.gamdl-temp`. Synced LRC lyrics are requested when Apple
@@ -63,62 +78,61 @@ octave setup --cookies /path/to/cookies.txt \
 You can import more playlists by repeating `--playlist`, or add one later
 from inside the TUI with `a`.
 
-## Manual import and launch
+## Import and launch
 
 ```bash
 octave import 'https://music.apple.com/.../playlist/...'
 octave
 ```
 
-To install directly from the hosted GitHub repository:
+## Commands
 
 ```bash
-curl -fsSL https://github.com/Drona-Srivastava/octave/archive/refs/heads/main.tar.gz \
-  | tar -xz && cd octave-main && ./install.sh
+octave                  # Launch the TUI
+octave status           # Show indexed track count
+octave update           # Rescan local audio files
+octave playlists        # List playlists
+octave songs            # List indexed songs
+octave config           # Show the active config path
 ```
+
+`amt` and `apple-music-tui` remain available as compatibility command names.
 
 ## TUI controls
 
-Press `a` to add another playlist. Press Enter to play, Left/Right to seek 5
-seconds, `n` for next, `b` for previous, `s` for shuffle, `t` for repeat, `l` to toggle
-album names, `/` to search, `o` to sort, `u` to rescan, and `q` to quit.
+| Key | Action |
+| --- | --- |
+| `Enter` | Play selected song |
+| `←` / `→` | Seek backward/forward 5 seconds |
+| `p` | Pause or resume |
+| `n` / `b` | Next/previous song |
+| `s` | Toggle shuffle |
+| `t` | Toggle repeat |
+| `a` | Add a playlist |
+| `f` | Refresh the selected playlist |
+| `r` | Rename playlist |
+| `d` | Delete playlist |
+| `x` | Remove song from playlist |
+| `/` | Search |
+| `o` | Change sort order |
+| `u` | Rescan library |
+| `Ctrl+T` | Change and save theme |
+| `q` | Quit |
 
-The application creates `~/.config/octave/config.toml` on first run. Media,
-playlists, cookies, and the SQLite index live below the configured library path.
-Uninstalling Octave
-does not remove your music library.
-
-Commands: `octave import URL`, `octave playlists`, `octave songs`,
-`octave update`, `octave status`, `octave config`, and `octave` to launch
-the TUI. `amt` remains available as a compatibility alias.
-
-Cookies are sensitive Netscape-format browser cookies. They are never logged,
-stored in the library, or included in this repository.
-
-## Useful commands
-
-```bash
-octave status       # Show the number of indexed tracks
-octave update       # Rescan the local music library
-octave playlists    # List imported playlists
-octave songs        # List indexed songs and file paths
-octave config       # Print the active configuration path
-octave              # Launch the TUI
-```
 
 ## Configuration and storage
 
-The default configuration is stored at `~/.config/octave/config.toml`. Media
-is stored under `~/.config/octave` by default, with the SQLite index in the same
-directory. The theme selected with `Ctrl+T` is saved in the `[ui]`
-section and restored on the next launch.
+By default, Octave stores configuration, cookies, downloaded media, playlists,
+and the SQLite index under `~/.config/octave/`. Gamdl temporary files are kept
+in `.gamdl-temp` inside the same directory. The selected theme is stored in the
+`[ui]` section and restored on the next launch.
 
 ### Editable playlists
 
 Playlist membership is stored in editable TOML files under
 `~/.config/octave/Playlists/<playlist-name>/playlist.toml`. SQLite remains the
-fast local index for song metadata; it is not the file users need to edit.
-Each playlist file contains a `tracks` list with paths relative to the library:
+metadata index; it is not necessary to edit the database manually. Each
+playlist file contains a `tracks` list with paths relative to the library:
 
 ```toml
 name = "Road Trip"
@@ -130,9 +144,10 @@ tracks = [
 ]
 ```
 
-Add or remove paths in `tracks`, run `octave update` to index new audio files,
-then reopen or rescan the playlist in the TUI. Apple Music imports create the
-initial `tracks` list from the downloaded playlist; later TOML edits are kept.
+Add or remove paths in `tracks`, run `octave update`, and reopen or rescan the
+playlist. Apple Music imports create the initial `tracks` list; later TOML edits
+are kept. Press `f` on a playlist to refresh it from Apple Music using its
+saved URL and the latest cookies file.
 
 To use another library or player, edit the configuration file, for example:
 
