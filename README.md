@@ -10,19 +10,13 @@ See Octave in action before installing:
 
 ### Installation and playlist setup
 
-<video controls width="800" preload="metadata">
-  <source src="https://raw.githubusercontent.com/Drona-Srivastava/octave/main/demo/octave_demo.mp4" type="video/mp4">
-  Your browser cannot play this video. [Download the installation demo](demo/octave_demo.mp4).
-</video>
+![Octave installation and playlist setup](demo/octave_demo.gif)
 
 [Download the installation and playlist setup demo](demo/octave_demo.mp4)
 
 ### Playlist refresh
 
-<video controls width="800" preload="metadata">
-  <source src="https://raw.githubusercontent.com/Drona-Srivastava/octave/main/demo/refresh.mp4" type="video/mp4">
-  Your browser cannot play this video. [Download the refresh demo](demo/refresh.mp4).
-</video>
+![Octave playlist refresh](demo/refresh.gif)
 
 [Download the playlist refresh demo](demo/refresh.mp4)
 
