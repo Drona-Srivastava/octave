@@ -1,5 +1,8 @@
 import re
 import random
+import os
+import socket
+import threading
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
@@ -119,6 +122,9 @@ class MusicApp(App):
         self.search_term = ""
         self.sort_mode = 0
         self.show_album = False
+        self.control_socket = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "octave-control.sock"
+        self.control_stop = threading.Event()
+        self.control_thread: threading.Thread | None = None
 
     def watch_theme(self, theme: str) -> None:
         self.config.theme = theme
@@ -127,11 +133,62 @@ class MusicApp(App):
     def on_mount(self) -> None:
         self.set_interval(0.5, self.update_lyrics)
         self.set_interval(0.5, self.check_playback)
+        self._start_control_socket()
 
     def on_unmount(self) -> None:
+        self._stop_control_socket()
         if self.import_worker and not self.import_worker.is_finished:
             self.import_worker.cancel()
         self.player.stop()
+
+    def _start_control_socket(self) -> None:
+        try:
+            self.control_socket.unlink(missing_ok=True)
+            server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            server.bind(str(self.control_socket))
+            self.control_socket.chmod(0o600)
+            server.listen(4)
+            server.settimeout(0.5)
+        except OSError:
+            return
+
+        def serve() -> None:
+            with server:
+                while not self.control_stop.is_set():
+                    try:
+                        client, _ = server.accept()
+                    except socket.timeout:
+                        continue
+                    except OSError:
+                        break
+                    with client:
+                        command = client.recv(32).decode(errors="ignore").strip().lower()
+                        actions = {
+                            "next": self.action_next,
+                            "previous": self.action_previous,
+                            "prev": self.action_previous,
+                            "pause": self.action_pause,
+                        }
+                        action = actions.get(command)
+                        if action:
+                            self.call_from_thread(action)
+                            client.sendall(b"ok\n")
+                        else:
+                            client.sendall(b"error\n")
+
+        self.control_stop.clear()
+        self.control_thread = threading.Thread(target=serve, name="octave-control", daemon=True)
+        self.control_thread.start()
+
+    def _stop_control_socket(self) -> None:
+        self.control_stop.set()
+        try:
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
+                client.settimeout(0.1)
+                client.connect(str(self.control_socket))
+        except OSError:
+            pass
+        self.control_socket.unlink(missing_ok=True)
 
     def compose(self) -> ComposeResult:
         yield Header()
