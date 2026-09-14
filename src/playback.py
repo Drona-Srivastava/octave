@@ -3,6 +3,7 @@ from __future__ import annotations
 import shutil
 import json
 import os
+import sys
 import socket
 import subprocess
 import tempfile
@@ -11,6 +12,20 @@ from pathlib import Path
 
 class PlaybackError(RuntimeError):
     pass
+
+
+def _set_process_name(name: str) -> None:
+    """Make the player process identifiable as Octave in process monitors."""
+    if sys.platform != "linux":
+        return
+    try:
+        import ctypes
+
+        libc = ctypes.CDLL(None)
+        libc.prctl(15, name.encode(), 0, 0, 0)  # PR_SET_NAME
+    except (AttributeError, OSError):
+        # Playback should still work if process naming is unavailable.
+        pass
 
 
 class MpvPlayer:
@@ -32,7 +47,7 @@ class MpvPlayer:
             self.binary, "--no-video", "--no-audio-display", "--no-terminal",
             "--really-quiet", f"--input-ipc-server={self.socket_path}", str(path)
         ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-           stdin=subprocess.DEVNULL)
+           stdin=subprocess.DEVNULL, preexec_fn=lambda: _set_process_name("octave"))
 
     def stop(self) -> None:
         if self.process and self.process.poll() is None:
